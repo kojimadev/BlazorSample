@@ -1,7 +1,95 @@
 ﻿@page "/"
+@using BlazorWebAssemblySample.Models
+@using System.Text.Json
+@inject HttpClient Http
 
 <PageTitle>Home</PageTitle>
 
 <h1>Hello, world!</h1>
 
 Welcome to your new app.
+
+@if (_articles == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>順位</th>
+                <th>記事タイトル</th>
+                <th>件数</th>
+                <th>イントロダクション</th>
+                <th>登録日時</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var article in _articles)
+            {
+                <tr>
+                    <td>@article.Number</td>
+                    <td><a href=@article.Link target="_blank" rel="noopener noreferrer">@article.Title</a></td>
+                    <td><a href=@article.EntryUrl target="_blank" rel="noopener noreferrer">@article.BookmarkCount</a></td>
+                    <td>@article.Description</td>
+                    <td>@article.Date</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Article>? _articles;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Web APIの呼び出し
+        string apiUrl = "任意の Web API のURL";
+
+        try
+        {
+	        // APIからデータを取得するためのHTTPリクエストを送信
+	        HttpResponseMessage response = await Http.GetAsync(apiUrl);
+
+	        // リクエストが成功したかどうか確認するメソッド
+	        response.EnsureSuccessStatusCode();
+
+	        // レスポンスの内容（JSON形式）を文字列として取得
+	        string responseBody = await response.Content.ReadAsStringAsync();
+
+	        // JSONをオブジェクトにデシリアライズ（変換）する際の設定
+	        var options = new JsonSerializerOptions
+	        {
+		        // プロパティ名の大文字小文字を無視する設定
+		        PropertyNameCaseInsensitive = true
+	        };
+
+	        // 取得したJSON文字列をArticleクラスのリストに変換
+	        _articles = JsonSerializer.Deserialize<List<Article>>(responseBody, options);
+
+	        // データが存在するかチェック
+	        if (_articles != null)
+	        {
+		        // データが存在すれば、各記事を順番に出力
+		        foreach (var article in _articles)
+		        {
+			        // 記事のタイトルとリンクをコンソールに表示
+			        Console.WriteLine($"Title: {article.Title}, Link: {article.Link}");
+		        }
+	        }
+	        else
+	        {
+                // データない場合のコンソール表示
+		        Console.WriteLine("No articles found.");
+	        }
+        }
+        catch (HttpRequestException e)
+        {
+            // APIからのデータ取得に失敗した場合のコンソール表示
+            Console.WriteLine("\nException Caught!");
+            Console.WriteLine("Message :{0} ", e.Message);
+        }
+    }
+}
